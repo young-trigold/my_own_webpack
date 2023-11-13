@@ -1,5 +1,6 @@
-import {component} from './components.js';
-document.body.appendChild(component);
+// import {component} from './components.js';
+// console.debug(component);
+// document.body.appendChild(component());
 const throttle = (callback,time=300) => {
   let previousCallTime = -Infinity;
   const callbackThrottled = function (...args) {
