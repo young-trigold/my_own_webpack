@@ -12,8 +12,6 @@ import {
   classExpression,
   functionExpression,
   type Expression,
-  memberExpression,
-  assignmentExpression
 } from '@babel/types';
 import traverse from '@babel/traverse';
 import generator from '@babel/generator';
@@ -41,16 +39,17 @@ const dirName = fileURLToPath(new URL('.', import.meta.url));
  */
 export class Module {
   path: string;
-  content: string = '';
+  content = '';
   ast: ParseResult<File> = {} as any;
   dependencies: Module[] = [];
-  static moduleMap: Map<string, Module> = new Map<string, Module>();
+  static moduleMap = new Map<string, Module>();
 
   constructor (path: string) {
-    this.path = path;
+    // escape slash
+    this.path = path.normalize(path).replace(/[\\$'"]/g, '\\$&');
     // console.debug(Module.moduleMap);
-    if (Module.moduleMap.has(this.path.replace(/\\/g, '-'))) return Module.moduleMap.get(this.path)!;
-    Module.moduleMap.set(this.path.replace(/\\/g, '-'), this);
+    if (Module.moduleMap.has(this.path)) return Module.moduleMap.get(this.path)!;
+    Module.moduleMap.set(this.path, this);
     this.init();
   }
 
@@ -62,12 +61,7 @@ export class Module {
 
     this.dependencies = (this.ast.program.body
       .filter(node => node.type === 'ImportDeclaration') as ImportDeclaration[])
-      .map((node) => {
-        const path = Module.resolvePath(this.path, node.source.value);
-        node.source.value = path.replace(/\\/g, '-');
-        console.debug(node.source.value);
-        return path;
-      })
+      .map((node) => Module.resolvePath(this.path, node.source.value))
       .map((path) => new Module(path));
   }
 
@@ -81,7 +75,7 @@ export class Module {
               blockStatement(body)))];
         nodePath.node.body = moduleFunc;
       },
-      ImportDeclaration (nodePath) {
+      ImportDeclaration: (nodePath) => {
         // import a, {b as _b, c} from 'test.js';
         // const importModule  = () => {};
         // const {default: _a, _b: b, c: _c} = importModule('test.js');
@@ -100,7 +94,7 @@ export class Module {
         const importVariableDeclaration = variableDeclaration('const', [
           variableDeclarator(
             objectPattern(specifiers.map(specifier => objectProperty(specifier.imported!, specifier.local))),
-            callExpression(identifier('importModule'), [stringLiteral(nodePath.get('source').node.value)])
+            callExpression(identifier('importModule'), [stringLiteral(Module.resolvePath(this.path, nodePath.get('source').node.value))])
           ),
         ]);
         nodePath.replaceWith(importVariableDeclaration);
@@ -156,7 +150,15 @@ export class Module {
         nodePath.replaceWith(returnSt);
       }
     });
-    this.content = generator.default(this.ast).code;
+    this.content = generator.default(this.ast, {
+      jsescOption: {
+        quotes: 'single',
+        minimal: true,
+        // isScriptContext: true
+      }
+    }).code;
+    console.debug(this.content);
+    this.dependencies.forEach(module => { module.transform(); });
   }
 
   /**
@@ -168,22 +170,23 @@ export class Module {
    */
   static resolvePath (currentModulePath: string, importModuleSource: string): string {
     if (importModuleSource.startsWith('.')) return path.resolve(path.dirname(currentModulePath), importModuleSource);
-    return importModuleSource;
+    return (importModuleSource);
   }
 
   async packToBundle (outputPath: string) {
     // writeFile(path.resolve(dirName, '../sample/log/dependency_graph.json'), stringify(moduleGraph)).catch(console.error);
-    const moduleMap = Module.moduleMap;
-    [...moduleMap.values()].forEach(module => { module.transform(); });
+    // const moduleMap = Module.moduleMap;
+    this.transform();
+    // [...moduleMap.values()].forEach(module => { module.transform(); });
     writeFile(path.resolve(dirName, '../sample/log/dependency_graph.json'), stringify(this)).catch(console.error);
-    const modulesAsStr = `{${[...moduleMap.entries()].map(([path, module]) => `"${path}": ${module.content.slice(0, -1)}`).join(',')}}`;
+    const modulesAsStr = `{${[...Module.moduleMap.entries()].map(([path, module]) => `"${path}": ${module.content.slice(0, -1)}`).join(',')}}`;
     // console.debug(modulesAsStr)
     const funcName = 'importModule';
     const bundleContent = `const moduleMap = ${modulesAsStr};
     const ${funcName} = (path) => {
       return moduleMap[path]();
     };
-    ${funcName}('${this.path.replace(/\\/g, '-')}');`;
+    ${funcName}('${this.path}');`;
     await writeFile(outputPath, bundleContent);
   };
 }

@@ -1,10 +1,10 @@
-const moduleMap = {"D:-Prjs-my_own_webpack-sample-input-index.js": () => {
+const moduleMap = {"D:\\Prjs\\my_own_webpack\\sample\\input\\index.js": () => {
   const {
     component: component
-  } = importModule("D:-Prjs-my_own_webpack-sample-input-components.js");
+  } = importModule('D:\\Prjs\\my_own_webpack\\sample\\input\\components.js');
   const {
     throttle: throttle
-  } = importModule("D:-Prjs-my_own_webpack-sample-input-thottle.js");
+  } = importModule('D:\\Prjs\\my_own_webpack\\sample\\input\\thottle.js');
   console.debug(component);
   const el = component();
   const onMouseMoveThrottled = throttle(event => {
@@ -16,7 +16,7 @@ const moduleMap = {"D:-Prjs-my_own_webpack-sample-input-index.js": () => {
   });
   window.addEventListener('mousemove', onMouseMoveThrottled);
   document.body.appendChild(el);
-},"D:-Prjs-my_own_webpack-sample-input-components.js": () => {
+},"D:\\Prjs\\my_own_webpack\\sample\\input\\components.js": () => {
   const component = () => {
     const ele = document.createElement('div');
     ele.style.width = '300px';
@@ -32,7 +32,7 @@ const moduleMap = {"D:-Prjs-my_own_webpack-sample-input-index.js": () => {
   return {
     component: component
   };
-},"D:-Prjs-my_own_webpack-sample-input-thottle.js": () => {
+},"D:\\Prjs\\my_own_webpack\\sample\\input\\thottle.js": () => {
   // import {component} from './components.js';
   // console.debug(component);
   // document.body.appendChild(component());
@@ -52,4 +52,4 @@ const moduleMap = {"D:-Prjs-my_own_webpack-sample-input-index.js": () => {
     const importModule = (path) => {
       return moduleMap[path]();
     };
-    importModule('D:-Prjs-my_own_webpack-sample-input-index.js');
+    importModule('D:\\Prjs\\my_own_webpack\\sample\\input\\index.js');
