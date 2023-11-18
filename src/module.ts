@@ -31,7 +31,8 @@ import { fileURLToPath } from 'url';
 const dirName = fileURLToPath(new URL('.', import.meta.url));
 
 /**
- * 模块依赖图节点
+ * 模块类型
+ * @class Module
  * @property {string} path 模块路径
  * @property {ParseResult<File>} ast 模块AST
  * @property {Map<string, Module>} moduleMap 缓存，键为 modulePath，值为依赖图节点
@@ -65,6 +66,10 @@ export class Module {
       .map((path) => new Module(path));
   }
 
+  /**
+   * - 将ESM转换为CMD
+   * - 将导入路径转为模块id（这里是绝对 path）
+   */
   transform () {
     traverse.default(this.ast, {
       Program (nodePath) {
@@ -163,7 +168,6 @@ export class Module {
 
   /**
    * 原始依赖路径得出模块绝对路径，原始路径可能是相对地址，绝对地址，node_modules 引用
-   * 这里是简化做法 只考虑相对路径
    * @param currentModulePath 当前模块的路径
    * @param importModuleSource 导入的模块路径
    * @returns {string} 模块绝对路径
@@ -173,6 +177,10 @@ export class Module {
     return (importModuleSource);
   }
 
+  /**
+   * 将模块打包为 bundle
+   * @param outputPath 输出路径
+   */
   async packToBundle (outputPath: string) {
     // writeFile(path.resolve(dirName, '../sample/log/dependency_graph.json'), stringify(moduleGraph)).catch(console.error);
     // const moduleMap = Module.moduleMap;
