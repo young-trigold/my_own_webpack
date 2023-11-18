@@ -46,7 +46,7 @@ export class Module {
 
   constructor (path: string) {
     // escape slash
-    this.path = path.normalize(path).replace(/[\\$'"]/g, '\\$&');
+    this.path = path.replace(/[\\$'"]/g, '\\$&');
     // console.debug(Module.moduleMap);
     if (Module.moduleMap.has(this.path)) return Module.moduleMap.get(this.path)!;
     Module.moduleMap.set(this.path, this);
