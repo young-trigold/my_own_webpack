@@ -1,7 +1,4 @@
-// import {component} from './components.js';
-// console.debug(component);
-// document.body.appendChild(component());
-const throttle = (callback,time=300) => {
+export const throttle = (callback,time=300) => {
   let previousCallTime = -Infinity;
   const callbackThrottled = function (...args) {
     if(globalThis.performance.now() - previousCallTime < time) return;
@@ -10,5 +7,3 @@ const throttle = (callback,time=300) => {
   };
   return callbackThrottled;
 };
-
-export {throttle};

@@ -108,21 +108,20 @@ export class Module {
         // const a = '';
         // export default a;
         // return {default: a}
-
         if (!nodePath.isExportDefaultDeclaration()) return;
         const declaration = nodePath.get('declaration');
-        const getValue = () => {
-          if (declaration.isExpression()) return declaration.node;
+        const objectPropertiesForDeclarations = () => {
+          if (declaration.isExpression()) return [objectProperty(stringLiteral('default'), declaration.node)];
           if (declaration.isClassDeclaration()) {
-            return classExpression(declaration.node.id, declaration.node.superClass, declaration.node.body);
+            return [objectProperty(stringLiteral('default'), classExpression(declaration.node.id, declaration.node.superClass, declaration.node.body))];
           }
           if (declaration.isFunctionDeclaration()) {
-            return functionExpression(declaration.node.id, declaration.node.params, declaration.node.body);
+            return [objectProperty(stringLiteral('default'), functionExpression(declaration.node.id, declaration.node.params, declaration.node.body))];
           }
-          return declaration.node as Expression;
+          return [objectProperty(stringLiteral('default'), declaration.node as Expression)];
         };
         // const re = expressionStatement(assignmentExpression('=', memberExpression(identifier('exports'), identifier('default')), getValue()))
-        const returns = returnStatement(objectExpression([objectProperty(identifier('default'), getValue())]));
+        const returns = returnStatement(objectExpression(objectPropertiesForDeclarations()));
         nodePath.replaceWith(returns);
       },
       ExportNamedDeclaration (nodePath) {
@@ -130,28 +129,24 @@ export class Module {
         // export {b as _b};
         // exports.default = b;
         if (!nodePath.isExportNamedDeclaration()) return;
-        const specifiers = nodePath.get('specifiers').map(specifier => {
-          if (specifier.isExportDefaultSpecifier()) {
-            return {
-              local: specifier.get('local'),
-              exported: specifier.get('exported'),
-            };
-          }
-          if (specifier.isExportNamespaceSpecifier()) {
-            return {
-              local: specifier.get('local'),
-              exported: specifier.get('exported'),
-            };
-          }
-          return {
-            local: specifier.get('local').node,
-            exported: specifier.get('exported').node,
-          };
+        const objectPropertiesForSpecifiers = nodePath.get('specifiers').map(specifier => {
+          if (specifier.isExportSpecifier()) return objectProperty(specifier.node.exported, specifier.node.local);
         });
-        // const res = specifiers.map(specifier => expressionStatement(assignmentExpression('=', memberExpression(identifier('exports'), specifier.exported), specifier.local)));
+        const declaration = nodePath.get('declaration');
+        const objectPropertiesForDeclarations = () => {
+          if (declaration.isVariableDeclaration()) {
+            return declaration.node.declarations.map(declaration => objectProperty(stringLiteral(declaration.id.name), declaration.init));
+          }
+          if (declaration.isFunctionDeclaration()) {
+            return [objectProperty(declaration.node.id!, functionExpression(declaration.node.id, declaration.node.params, declaration.node.body))];
+          }
+          if (declaration.isClassDeclaration()) {
+            return [objectProperty(declaration.node.id!, classExpression(declaration.node.id, declaration.node.superClass, declaration.node.body))];
+          }
+          return [];
+        };
         const returnSt = returnStatement(
-          objectExpression(
-            specifiers.map(specifier => objectProperty(specifier.exported, specifier.local))));
+          objectExpression([...objectPropertiesForSpecifiers, ...objectPropertiesForDeclarations()]));
         nodePath.replaceWith(returnSt);
       }
     });
